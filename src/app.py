@@ -14,14 +14,22 @@ from telegram.ext import (
 from dotenv import load_dotenv
 from bot import (
     start, menu_handler, show_menu_categories, show_category_items,
-    MAIN_MENU, ADMIN_MENU, VIEW_MENU, ORDER_ITEMS, CONFIRM_ORDER,
+    MAIN_MENU, ADMIN_MENU, CASHIER_MENU, SERVER_MENU, VIEW_MENU, ORDER_ITEMS, CONFIRM_ORDER,
     ADD_PRODUCT, EDIT_PRODUCT, VIEW_ORDERS, MANAGE_TABLES,
     EDIT_PRODUCT_NAME, EDIT_PRODUCT_PRICE, EDIT_PRODUCT_CATEGORY, 
     EDIT_PRODUCT_DESCRIPTION, EDIT_PRODUCT_AVAILABILITY,
+    ORDER_PREPARATION, BILL_ACTIONS, SELECTING_BILL_TABLE,
     error_handler, add_product, edit_product, update_product,
     save_product_name, save_product_price, save_product_category,
     save_product_description, show_tables, reserve_table, show_category_products,
-    add_to_cart, view_cart, clear_cart, confirm_order
+    add_to_cart, view_cart, clear_cart, confirm_order,
+    admin_manage_tables, unreserve_table, reset_all_tables, confirm_reset_tables,
+    # Thêm các hàm mới cho quản lý bàn
+    add_new_table, create_table, edit_table_info, edit_table_capacity, update_table_capacity,
+    delete_table, pre_confirm_delete_table, confirm_delete_table,
+    manage_table_status, quick_payment_by_table, pay_table, confirm_pay_table, 
+    admin_panel, start_order, view_orders, cancel,
+    mark_order_preparing, mark_order_ready, request_bill, show_table_bill, send_bill_to_group, process_payment
 )
 
 # Load token from environment
@@ -29,7 +37,7 @@ load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 if not TOKEN:
     # Fallback to direct token if not in environment variables
-    TOKEN = '7705072328:AAElGoUVLaXNnbwsMyBg59tWOCXNdVtHkz4'
+    TOKEN = '8111919258:AAGMe6AV3qOoqq3SVpMvpIR_9v7ja5MWApQ'
 
 async def main():
     # Configure logging
@@ -49,6 +57,12 @@ async def main():
                 CallbackQueryHandler(menu_handler)
             ],
             ADMIN_MENU: [
+                CallbackQueryHandler(menu_handler)
+            ],
+            CASHIER_MENU: [
+                CallbackQueryHandler(menu_handler)
+            ],
+            SERVER_MENU: [
                 CallbackQueryHandler(menu_handler)
             ],
             VIEW_MENU: [
@@ -102,8 +116,45 @@ async def main():
                 CallbackQueryHandler(menu_handler, pattern='^back_to_main$')
             ],
             MANAGE_TABLES: [
-                # Xử lý quản lý bàn sẽ được thêm ở đây
-                CallbackQueryHandler(menu_handler, pattern='^back_to_main$')
+                # Các chức năng quản lý bàn
+                CallbackQueryHandler(admin_manage_tables, pattern='^manage_tables$'),
+                CallbackQueryHandler(add_new_table, pattern='^add_new_table$'),
+                CallbackQueryHandler(create_table, pattern='^create_table_'),
+                CallbackQueryHandler(edit_table_info, pattern='^edit_table_info$'),
+                CallbackQueryHandler(edit_table_capacity, pattern='^edit_table_'),
+                CallbackQueryHandler(update_table_capacity, pattern='^update_table_'),
+                CallbackQueryHandler(delete_table, pattern='^delete_table$'),
+                CallbackQueryHandler(pre_confirm_delete_table, pattern='^pre_confirm_delete_table_'),
+                CallbackQueryHandler(confirm_delete_table, pattern='^confirm_delete_table_'),
+                CallbackQueryHandler(manage_table_status, pattern='^manage_table_status$'),
+                CallbackQueryHandler(quick_payment_by_table, pattern='^quick_payment_by_table$'),
+                CallbackQueryHandler(pay_table, pattern='^pay_table_'),
+                CallbackQueryHandler(confirm_pay_table, pattern='^confirm_pay_table_'),
+                CallbackQueryHandler(unreserve_table, pattern='^unreserve_'),
+                CallbackQueryHandler(reserve_table, pattern='^reserve_'),
+                CallbackQueryHandler(reset_all_tables, pattern='^reset_all_tables$'),
+                CallbackQueryHandler(confirm_reset_tables, pattern='^confirm_reset_tables$'),
+                CallbackQueryHandler(menu_handler, pattern='^back_to_main$'),
+                CallbackQueryHandler(menu_handler)
+            ],
+            ORDER_PREPARATION: [
+                CallbackQueryHandler(mark_order_preparing, pattern='^order_preparing_'),
+                CallbackQueryHandler(mark_order_ready, pattern='^order_ready_'),
+                CallbackQueryHandler(menu_handler)
+            ],
+            BILL_ACTIONS: [
+                CallbackQueryHandler(request_bill, pattern='^request_bill$'),
+                CallbackQueryHandler(show_table_bill, pattern='^bill_for_table_'),
+                CallbackQueryHandler(send_bill_to_group, pattern='^send_bill_to_group_'),
+                CallbackQueryHandler(process_payment, pattern='^process_payment_'),
+                CallbackQueryHandler(confirm_pay_table, pattern='^confirm_pay_table_'),
+                CallbackQueryHandler(menu_handler, pattern='^back_to_main$'),
+                CallbackQueryHandler(menu_handler)
+            ],
+            SELECTING_BILL_TABLE: [
+                CallbackQueryHandler(show_table_bill, pattern='^bill_for_table_'),
+                CallbackQueryHandler(menu_handler, pattern='^back_to_main$'),
+                CallbackQueryHandler(menu_handler)
             ]
         },
         fallbacks=[CommandHandler('start', start)]
@@ -128,6 +179,7 @@ async def main():
     # Set up signal handling for graceful exit
     try:
         await stop_signal
+        
     except asyncio.CancelledError:
         pass
     finally:
